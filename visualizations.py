@@ -1,5 +1,6 @@
 import math
 
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import matplotlib.gridspec as grid_spec
@@ -49,75 +50,96 @@ class Visualizations():
         for s in ["top", "right"]:
             g.spines[s].set_visible(False)
 
-    def computeGridSize(self, xs, nrows=None, ncols=None):
+    def computeGridSize(self, feats, nrows=None, ncols=None):
         if (nrows is None) & (ncols is None):
-            ncols = math.ceil(math.sqrt(len(xs)))
-            nrows = math.ceil(len(xs) / ncols)
+            ncols = math.ceil(math.sqrt(len(feats)))
+            nrows = math.ceil(len(feats) / ncols)
         elif (nrows is None):
-            nrows = math.ceil(len(xs) / ncols)
+            nrows = math.ceil(len(feats) / ncols)
         else:
-            ncols = math.ceil(len(xs) / nrows)
+            ncols = math.ceil(len(feats) / nrows)
         return (nrows, ncols)
 
-    def drawMultiplePlots(self, plotFunction, data, xs=None, title=None, figSize=None, nrows=None, ncols=None, **kwargs):
-        if xs is None:
-            xs = list(data.columns[data.dtypes != object])
-        nrows, ncols = self.computeGridSize(xs=xs, nrows=nrows, ncols=ncols)
+    def drawMultiplePlots(self, plotFunction, data, feats=None, title=None, figSize=None, nrows=None, ncols=None, **kwargs):
+        if feats is None:
+            feats = list(data.columns[data.dtypes != object])
+        nrows, ncols = self.computeGridSize(feats=feats, nrows=nrows, ncols=ncols)
         if figSize is None:
             figSize = tuple([self.defaultFigSize[0] * ncols, self.defaultFigSize[1] * nrows])
         fig = plt.figure(figsize=figSize, facecolor=self.figFaceColor, tight_layout=True)
         fig.suptitle(title, fontsize=self.fontSize+4, fontweight=self.fontWeight, fontfamily=self.fontFamily)
-        for i, x in enumerate(xs):
+        for i, feat in enumerate(feats):
             locals()["ax" + str(i)] = fig.add_subplot(nrows, ncols, i + 1)
-            plotFunction(data=data, x=x, title=x, ax=locals()["ax" + str(i)], **kwargs)
+            plotFunction(data=data, feat=feat, title=feat, ax=locals()["ax" + str(i)], **kwargs)
 
-    def drawKDEPlot(self, data, x, title=None, figSize=None, showGrid=True, ax=None):       
+    def drawKDEPlot(self, data, feat, title=None, figSize=None, showGrid=True, ax=None):       
         ax = self.initializePlot(ax=ax, figSize=figSize)
-        g = sns.kdeplot(ax=ax, data=data, x=x, fill=True, linewidth=self.defaultLineWidth, \
+        g = sns.kdeplot(ax=ax, data=data, x=feat, fill=True, linewidth=self.defaultLineWidth, \
             ec=self.colorBlack, alpha=self.defaultAlpha, zorder=3, legend=False)
-        self.setPlotProperties(g, ax, title=title, xlabel=x, showGrid=showGrid, hideYAxis=True)        
+        self.setPlotProperties(g, ax, title=title, xlabel=feat, showGrid=showGrid, hideYAxis=True)        
 
-    def drawMultipleKDEPlots(self, data, figSize, title=None, xs=None, showGrid=True, nrows=None, ncols=None):
+    def drawMultipleKDEPlots(self, data, figSize, title=None, feats=None, showGrid=True, nrows=None, ncols=None):
         self.drawMultiplePlots(plotFunction=self.drawKDEPlot, data=data, figSize=figSize, title=title, \
-            nrows=nrows, ncols=ncols, xs=xs, showGrid=showGrid)
+            nrows=nrows, ncols=ncols, feats=feats, showGrid=showGrid)
 
-    def drawKDEPlotsByCategory(self, data, x, category, title=None, figSize=None, showGrid=True, ax=None):       
+    def drawKDEPlotsByCategory(self, data, feat, category, title=None, figSize=None, showGrid=True, ax=None):       
         ax = self.initializePlot(ax=ax, figSize=figSize)
-        g = sns.kdeplot(ax=ax, data=data, x=x, hue=category, palette=self.snsPalette, fill=True, \
+        g = sns.kdeplot(ax=ax, data=data, x=feat, hue=category, palette=self.snsPalette, fill=True, \
             alpha=self.defaultAlpha, linewidth=self.defaultLineWidth, multiple="stack", zorder=3)
         self.setPlotProperties(g, ax, title=title, showGrid=showGrid, hideYAxis=True, hideLegendTitle=True)
 
-    def drawMultipleKDEPlotsByCategory(self, data, category, xs=None, title=None, figSize=None, showGrid=True, nrows=None, ncols=None):
+    def drawMultipleKDEPlotsByCategory(self, data, category, feats=None, title=None, figSize=None, showGrid=True, nrows=None, ncols=None):
         self.drawMultiplePlots(plotFunction=self.drawKDEPlotsByCategory, data=data, figSize=figSize, title=title, \
-            nrows=nrows, ncols=ncols, xs=xs, category=category, showGrid=showGrid)
+            nrows=nrows, ncols=ncols, feats=feats, category=category, showGrid=showGrid)
 
-    def drawRegressionPlot(self, data, x, y, title=None, figSize=None, ax=None):
+    def drawRegressionPlot(self, data, feat, feat2, title=None, figSize=None, ax=None):
         ax = self.initializePlot(ax=ax, figSize=figSize)
-        g = sns.regplot(ax=ax, data=data, x=x, y=y, line_kws={"color":self.colorBlack}, \
+        g = sns.regplot(ax=ax, data=data, x=feat, y=feat2, line_kws={"color":self.colorBlack}, \
             scatter_kws={"edgecolors":[self.colorWhite], "alpha":self.defaultAlpha, "linewidth": 0.5})
         self.setPlotProperties(g, ax, title=title, showGrid=False, hideLegendTitle=True)
 
-    def drawBarPlot(self, data, x, y, category=None, title=None, figSize=None, ax=None):
+    def drawBarPlot(self, data, feat, feat2, category=None, title=None, figSize=None, ax=None):
         ax = self.initializePlot(ax=ax, figSize=figSize)
-        g = sns.barplot(ax=ax, data=data, x=x, y=y, hue=category, palette=self.snsPalette, edgecolor = self.colorBlack)
+        g = sns.barplot(ax=ax, data=data, x=feat, y=feat2, hue=category, palette=self.snsPalette, edgecolor=self.colorBlack)
         self.setPlotProperties(g, ax, title=title, showGrid=False, hideLegendTitle=True)
 
-    def drawScatterPlot(self, data, x, y, category=None, title=None, figSize=None, ax=None):
+    def drawScatterPlot(self, data, feat, feat2, category=None, title=None, figSize=None, ax=None):
         ax = self.initializePlot(ax=ax, figSize=figSize)
-        g = sns.scatterplot(ax=ax, data=data, x=x, y=y, hue=category, palette=self.snsPalette, edgecolor = self.colorWhite)
+        g = sns.scatterplot(ax=ax, data=data, x=feat, y=feat2, hue=category, palette=self.snsPalette, edgecolor=self.colorWhite)
         self.setPlotProperties(g, ax, title=title, showGrid=False, hideLegendTitle=True)
 
-    def drawMultipleScatterPlots(self, data, xs, y, category=None, title=None, figSize=None, nrows=None, ncols=None):
-        self.drawMultiplePlots(plotFunction=self.drawScatterPlot, data=data, xs=xs, y=y, category=category, \
+    def drawMultipleScatterPlots(self, data, feats, feat2, category=None, title=None, figSize=None, nrows=None, ncols=None):
+        self.drawMultiplePlots(plotFunction=self.drawScatterPlot, data=data, feats=feats, feat2=feat2, category=category, \
             title=title, figSize=figSize, nrows=nrows, ncols=ncols)
 
-    def drawBoxPlot(self, data, x, category=None, title=None, figSize=None, ax=None):
+    def drawBoxPlot(self, data, feat, feat2=None, title=None, figSize=None, ax=None):
         ax = self.initializePlot(ax=ax, figSize=figSize)
         colorBlackDict = {"color": self.colorBlack}
         plotProps = {"boxprops": {"edgecolor": self.colorBlack}, "medianprops": colorBlackDict, "whiskerprops": colorBlackDict, "capprops": colorBlackDict}
-        g = sns.boxplot(ax=ax, data=data, x=category, y=x, palette=self.snsPalette, fliersize=3, linewidth=self.defaultLineWidth, **plotProps)
+        g = sns.boxplot(ax=ax, data=data, y=feat, x=feat2, palette=self.snsPalette, fliersize=3, linewidth=self.defaultLineWidth, **plotProps)
         self.setPlotProperties(g, ax, title=title, showGrid=False, hideLegendTitle=True)
 
-    def drawMultipleBoxPlots(self, data, xs, category=None, title=None, figSize=None, nrows=None, ncols=None):
-        self.drawMultiplePlots(plotFunction=self.drawBoxPlot, data=data, xs=xs, category=category, \
+    def drawMultipleBoxPlots(self, data, feats, feat2=None, title=None, figSize=None, nrows=None, ncols=None):
+        self.drawMultiplePlots(plotFunction=self.drawBoxPlot, data=data, feats=feats, feat2=feat2, \
             title=title, figSize=figSize, nrows=nrows, ncols=ncols)
+
+    def drawViolinPlot(self, data, feat, feat2, category=None, title=None, figSize=None, ax=None):
+        ax = self.initializePlot(ax=ax, figSize=figSize)
+        g = sns.violinplot(ax=ax, data=data, y=feat, x=feat2, hue=category, palette=self.snsPalette, linewidth=self.defaultLineWidth)
+        self.setPlotProperties(g, ax, title=title, showGrid=False, hideLegendTitle=True)
+
+    def drawMultipleViolinPlots(self, data, feats, feat2, category=None, title=None, figSize=None, nrows=None, ncols=None):
+        self.drawMultiplePlots(plotFunction=self.drawViolinPlot, data=data, feats=feats, feat2=feat2, category=category, \
+            title=title, figSize=figSize, nrows=nrows, ncols=ncols)
+
+    def drawMissingValuesHeatmap(self, data, title=None, figSize=None, sorted=True):
+        if figSize is None:
+            figSize = (5, math.ceil(data.shape[1] / 3))
+        missingCounts = data.isna().sum().to_frame()
+        if sorted:
+            missingCounts.sort_values(by=0, inplace=True)
+        ax = self.initializePlot(ax=None, figSize=figSize)
+        reverseCMap = cm.get_cmap(self.snsPalette).reversed()
+        g = sns.heatmap(ax=ax, data=missingCounts, vmin=0, vmax=data.shape[0], cmap=reverseCMap, \
+            xticklabels=False, annot=True, fmt="d")
+        self.setPlotProperties(g, ax, title=title, showGrid=False)
