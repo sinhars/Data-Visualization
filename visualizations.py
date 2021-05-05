@@ -4,8 +4,10 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import matplotlib.gridspec as grid_spec
+
 import seaborn as sns
 from pywaffle import Waffle
+from pandas.plotting import andrews_curves
 
 class Visualizations():
 
@@ -40,7 +42,7 @@ class Visualizations():
         g.set_facecolor(self.plotFaceColor)
         g.set_title(title, fontsize=self.fontSize+2, fontweight=self.fontWeight, fontfamily=self.fontFamily)
         g.set_xlabel(xlabel, fontsize=self.fontSize, fontweight=self.fontWeight, fontfamily=self.fontFamily)
-        g.set_ylabel(xlabel, fontsize=self.fontSize, fontweight=self.fontWeight, fontfamily=self.fontFamily)
+        g.set_ylabel(ylabel, fontsize=self.fontSize, fontweight=self.fontWeight, fontfamily=self.fontFamily)
         if hideYAxis & (g.get_yaxis() is not None):
             g.get_yaxis().set_visible(False)
             g.spines["left"].set_visible(False)
@@ -48,6 +50,9 @@ class Visualizations():
             g.get_legend().set_title(None)
         if showGrid:
             ax.grid(axis="x", which="major", zorder=0, color=self.colorGray, linestyle=":", dashes=(1,5))
+            ax.grid(axis="y", which="major", zorder=0, color=self.colorGray, linestyle=":", dashes=(1,5))
+        else:
+            ax.grid(b=False)
         for s in ["top", "right"]:
             g.spines[s].set_visible(False)
 
@@ -93,25 +98,37 @@ class Visualizations():
         self.drawMultiplePlots(plotFunction=self.drawKDEPlotsByCategory, data=data, figSize=figSize, title=title, \
             nrows=nrows, ncols=ncols, feats=feats, category=category, showGrid=showGrid)
 
-    def drawRegressionPlot(self, data, feat, feat2, title=None, figSize=None, ax=None):
+    def drawRegressionPlot(self, data, feat, feat2, title=None, figSize=None, showGrid=True, ax=None):
         ax = self.initializePlot(ax=ax, figSize=figSize)
         g = sns.regplot(ax=ax, data=data, x=feat, y=feat2, line_kws={"color":self.colorBlack}, \
             scatter_kws={"edgecolors":[self.colorWhite], "alpha":self.defaultAlpha, "linewidth": 0.5})
-        self.setPlotProperties(g, ax, title=title, showGrid=False, hideLegendTitle=True)
+        self.setPlotProperties(g, ax, title=title, showGrid=showGrid, hideLegendTitle=True)
 
     def drawBarPlot(self, data, feat, feat2, category=None, title=None, figSize=None, ax=None):
         ax = self.initializePlot(ax=ax, figSize=figSize)
         g = sns.barplot(ax=ax, data=data, x=feat, y=feat2, hue=category, palette=self.snsPalette, edgecolor=self.colorBlack)
         self.setPlotProperties(g, ax, title=title, showGrid=False, hideLegendTitle=True)
 
-    def drawScatterPlot(self, data, feat, feat2, category=None, title=None, figSize=None, ax=None):
+    def drawScatterPlot(self, data, feat, feat2, category=None, title=None, figSize=None, showGrid=True, ax=None):
         ax = self.initializePlot(ax=ax, figSize=figSize)
         g = sns.scatterplot(ax=ax, data=data, x=feat, y=feat2, hue=category, palette=self.snsPalette, edgecolor=self.colorWhite)
-        self.setPlotProperties(g, ax, title=title, showGrid=False, hideLegendTitle=True)
+        self.setPlotProperties(g, ax, title=title, showGrid=showGrid, hideLegendTitle=True)
 
-    def drawMultipleScatterPlots(self, data, feats, feat2, category=None, title=None, figSize=None, nrows=None, ncols=None):
+    def drawMultipleScatterPlots(self, data, feats, feat2, category=None, title=None, figSize=None, showGrid=True, nrows=None, ncols=None):
         self.drawMultiplePlots(plotFunction=self.drawScatterPlot, data=data, feats=feats, feat2=feat2, category=category, \
-            title=title, figSize=figSize, nrows=nrows, ncols=ncols)
+            title=title, figSize=figSize, nrows=nrows, ncols=ncols, showGrid=showGrid)
+
+    def drawCategoricalScatterPlot(self, data, feat, feat2, title=None, figSize=None, showGrid=True, ax=None):
+        ax = self.initializePlot(ax=ax, figSize=figSize)
+        countsData = data.groupby([feat, feat2]).size().reset_index(name="counts")
+        reverseCMap = cm.get_cmap(self.snsPalette).reversed()
+        g = sns.scatterplot(ax=ax, data=countsData, x=feat, y=feat2, size=countsData["counts"], palette=reverseCMap, edgecolor=self.colorBlack)
+        self.setPlotProperties(g, ax, title=title, showGrid=showGrid, hideLegendTitle=True)
+
+    def drawLinePlot(self, data, feat, feat2, category=None, title=None, figSize=None, showGrid=True, ax=None):
+        ax = self.initializePlot(ax=ax, figSize=figSize)
+        g = sns.lineplot(ax=ax, data=data, x=feat, y=feat2, hue=category, palette=self.snsPalette)
+        self.setPlotProperties(g, ax, title=title, showGrid=showGrid, hideLegendTitle=True)
 
     def drawBoxPlot(self, data, feat, feat2=None, title=None, figSize=None, ax=None):
         ax = self.initializePlot(ax=ax, figSize=figSize)
@@ -175,3 +192,16 @@ class Visualizations():
         
         fig = plt.figure(FigureClass=Waffle, plots=wafflePlots, figsize=figSize, rounding_rule="floor")
         plt.show()
+
+    def drawCorrelationMatrix(self, data, title=None, figSize=None, ax=None):
+        ax = self.initializePlot(ax=ax, figSize=figSize)
+        corrMatrix = data.corr()
+        g = sns.heatmap(corrMatrix, xticklabels=corrMatrix.columns, yticklabels=corrMatrix.columns, \
+            cmap=self.snsPalette, annot=True, fmt=".2f")
+        self.setPlotProperties(g, ax, title=title, showGrid=False)
+
+    def drawAndrewsCurves(self, data, feat, title=None, figSize=None, showGrid=True, ax=None):
+        ax = self.initializePlot(ax=ax, figSize=figSize)
+        g = andrews_curves(ax=ax, frame=data, class_column=feat, colormap=self.snsPalette)
+        ax.grid(b=False)
+        self.setPlotProperties(g, ax, title=title, showGrid=showGrid)
