@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import matplotlib.gridspec as grid_spec
 import seaborn as sns
+from pywaffle import Waffle
 
 class Visualizations():
 
@@ -143,3 +144,91 @@ class Visualizations():
         g = sns.heatmap(ax=ax, data=missingCounts, vmin=0, vmax=data.shape[0], cmap=reverseCMap, \
             xticklabels=False, annot=True, fmt="d")
         self.setPlotProperties(g, ax, title=title, showGrid=False)
+
+    # def drawWafflePlot(self, data, feat, feat2=None, title=None, figSize=None, ax=None, iconName=None, iconSize=15):
+    #     if feat2 is None:
+    #         countsData = data.groupby([feat]).size().reset_index(name="counts").sort_values("counts", ascending=False)
+    #     else:
+    #         countsData = data.groupby([feat, feat2]).size().reset_index(name="counts").sort_values("counts", ascending=False)
+    #     countsData["counts"] = countsData["counts"] / sum(countsData["counts"])
+    #     waffleColors = [plt.get_cmap(self.snsPalette)(i / float(countsData.shape[0])) for i in range(countsData.shape[0])]
+        
+    #     if feat2 is None:
+    #         waffleLabels = ["%s (%.1f%%)" % (row[feat], 100 * row["counts"]) for _, row in countsData.iterrows()]
+    #     else:
+    #         waffleLabels = ["%s/ %s (%.1f%%)" % (row[feat], row[feat2], 100 * row["counts"]) for _, row in countsData.iterrows()]
+
+    #     g = plt.figure(FigureClass=Waffle, values=countsData["counts"], rows=15, columns=15, \
+    #         rounding_rule="floor", colors=waffleColors, icons=iconName, icon_size=iconSize, icon_legend=False, \
+    #         legend={"labels": waffleLabels, "loc": "upper left", "bbox_to_anchor": (1, 1)}, 
+    #         title={"label": title, "loc":"center","fontsize":(self.fontSize + 2)})
+        
+    # def drawWafflePlot(self, data, feat, feat2=None, title=None, figSize=None, ax=None, iconName=None, iconSize=None):
+    #     if feat2 is None:
+    #         countsData = data.groupby([feat]).size().reset_index(name="counts").sort_values("counts", ascending=False)
+    #     else:
+    #         countsData = data.groupby([feat, feat2]).size().reset_index(name="counts").sort_values("counts", ascending=False)
+    #     countsData["counts"] = countsData["counts"] / sum(countsData["counts"])
+    #     waffleColors = [plt.get_cmap(self.snsPalette)(i / float(countsData.shape[0])) for i in range(countsData.shape[0])]
+        
+    #     if feat2 is None:
+    #         waffleLabels = ["%s (%.1f%%)" % (row[feat], 100 * row["counts"]) for _, row in countsData.iterrows()]
+    #     else:
+    #         waffleLabels = ["%s/ %s (%.1f%%)" % (row[feat], row[feat2], 100 * row["counts"]) for _, row in countsData.iterrows()]
+
+    #     g = plt.figure(FigureClass=Waffle, figsize=figSize, \
+    #         plots={
+    #             "121":{
+    #                 "values":countsData["counts"], 
+    #                 "rows": 15, 
+    #                 "columns": 15, 
+    #                 "colors": waffleColors, 
+    #                 "icons": iconName, 
+    #                 "icon_size": iconSize, 
+    #                 "icon_legend": False,
+    #                 "title": {"label": "Yes", "loc":"center","fontsize":(self.fontSize + 2)}, 
+    #             },
+    #             "122":{
+    #                 "values":countsData["counts"], 
+    #                 "rows": 15, 
+    #                 "columns": 15, 
+    #                 "colors": waffleColors, 
+    #                 "icons": iconName, 
+    #                 "icon_size": iconSize, 
+    #                 "icon_legend": False,
+    #                 "title": {"label": "No", "loc":"center","fontsize":(self.fontSize + 2)}, 
+    #             }
+    #         },
+    #         legend={"labels": waffleLabels, "loc": "upper center", "bbox_to_anchor": (0.5, -0.05), "ncol":2}, 
+    #         rounding_rule="floor")
+        
+    def drawWafflePlot(self, data, feat, feat2=None, title=None, figSize=None, iconName=None, iconSize=None, waffleRows=10, waffleColumns=10):
+
+        def getCountsData(data, feat):
+            countsData = data.groupby(feat).size().reset_index(name="counts").sort_values("counts", ascending=False)
+            countsData["counts"] = countsData["counts"] / sum(countsData["counts"])
+            return (countsData)
+
+        plotLabels = [feat] if (feat2 is None) else data[feat2].unique()
+        countsData = getCountsData(data=data, feat=feat)
+        wafflePlots = {}
+        for p in range(len(plotLabels)):
+            if feat2 is not None:
+                countsData = getCountsData(data=data[data[feat2] == plotLabels[p]], feat=feat)
+            waffleColors = [plt.get_cmap(self.snsPalette)(i / float(countsData.shape[0])) for i in range(countsData.shape[0])]
+            waffleLabels = ["%s (%.1f%%)" % (row[feat], 100 * row["counts"]) for _, row in countsData.iterrows()]
+            propsDict = {
+                "values":countsData["counts"], 
+                "rows": waffleRows, 
+                "columns": waffleColumns, 
+                "colors": waffleColors, 
+                "icons": iconName, 
+                "icon_size": iconSize, 
+                "icon_legend": False,
+                "title": {"label": plotLabels[p], "loc":"center","fontsize":(self.fontSize + 2)},
+                "legend": {"labels": waffleLabels, "loc": "upper center", "bbox_to_anchor": (0.5, -0.05), "ncol":2}, 
+            }
+            wafflePlots["1" + str(len(plotLabels)) + str(p + 1)] = propsDict
+        
+        fig = plt.figure(FigureClass=Waffle, plots=wafflePlots, figsize=figSize, rounding_rule="floor")
+        plt.show()
